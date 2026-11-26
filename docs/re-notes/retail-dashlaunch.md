@@ -23,7 +23,7 @@ Debug monitor registration is reconstructed from verified kernel and DashLaunch 
 - The system process comes from the current system thread.
 - A transient non-system thread reports the title process.
 - An IPI records each active hardware thread's processor control block. `XboxHardwareInfo.NumberOfProcessors` supplies the count.
-- DashLaunch `ldata` offsets `0x21c` and `0x220` provide `KiDebugRoutine` and the single-step patch address after its `DL30` identifier and target kernel are validated. Reconstruction is enabled only for raw kernel version `2.0.17559.0x8000`, which is displayed as `2.0.17559.0`.
+- DashLaunch `ldata` offsets `0x21c` and `0x220` provide `KiDebugRoutine` and the single-step patch address after its `DL30` identifier and target kernel are validated. Reconstruction is enabled only for kernel `2.0.17559.0`, whatever bit 15 of the raw QFE word holds: the verified console reports `2.0.17559.0x8000`, and an RGH3 console with the same kernel reports `2.0.17559.0x0000`.
 - The reconstructed block remains private to the plugin. Retail does not publish the control dispatcher through `KeDebugMonitorData` because safe plugin unload would require a trampoline outside the unloadable image.
 
 | Kernel routine variable | Retail behavior |

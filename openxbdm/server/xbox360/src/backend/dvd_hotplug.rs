@@ -823,7 +823,7 @@ fn find_channel(
         && major == 2
         && minor == 0
         && build == 17559
-        && qfe == 0x8000;
+        && qfe & 0x7fff == 0;
     if !retail_17559 && (major != 2 || minor != 0 || qfe != 0x8000) {
         return Err(PatchError::UnsupportedKernel);
     }

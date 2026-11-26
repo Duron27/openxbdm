@@ -60,7 +60,10 @@ const RETAIL_PHYSICAL_PAGE_THRESHOLD: u32 = 0x2_0000;
 pub fn supported_kernel() -> bool {
     let version = kernel_version();
 
-    version.major == 2 && version.minor == 0 && version.build == 17559 && version.qfe == 0x8000
+    // Bit 15 of the QFE word is not part of the kernel build: it is set on some patched retail
+    // consoles and clear on others (an RGH3 console's 17559 kernel reports 2.0.17559.0x0000), and
+    // the reconstructed offsets depend only on the build.
+    version.major == 2 && version.minor == 0 && version.build == 17559 && version.qfe_number() == 0
 }
 
 const XEX_PC_TO_FILE_HEADER: Ordinal = match Ordinal::new(412) {
