@@ -61,6 +61,19 @@ pub(crate) use self::settings::write_text;
 pub use self::title::LaunchReason;
 pub use self::title::LaunchRequest;
 pub use self::title::LaunchTitle;
+
+/// Outcome of [`AnyBackend::loader_launch`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoaderLaunch {
+    /// This console has no loader launch; a hardware reboot launches instead.
+    Unavailable,
+    /// The loader took the title.
+    Started,
+    /// A previous loader launch has not finished.
+    Busy,
+    /// The image path has no directory to link.
+    BadPath,
+}
 pub use self::title::TITLE_TEXT_CAPACITY;
 pub use self::title::TitleFlags;
 pub use self::title::TitleRebootStop;
@@ -242,6 +255,9 @@ pub trait Backend {
     fn title_launch_registered(&mut self) -> bool;
     /// Call the registered title launch routine.
     fn launch_title(&mut self);
+    /// Hand `title` to the system loader, for consoles whose system software
+    /// registers no launch routine (patched retail).
+    fn loader_launch(&mut self, title: &LaunchTitle) -> LoaderLaunch;
     /// Allocate the buffer of a `flash` image; None when out of memory.
     fn flash_begin(&mut self, rounded_size: u32) -> Option<FlashBuffer>;
     /// Store received image bytes at `offset` of `buffer`.

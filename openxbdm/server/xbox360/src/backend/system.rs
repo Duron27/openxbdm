@@ -4,6 +4,8 @@
 mod exports;
 pub(super) mod flash;
 mod launch;
+#[cfg(feature = "retail-dashlaunch")]
+mod loader;
 mod settings;
 
 use core::sync::atomic::Ordering;
@@ -16,6 +18,8 @@ use openxbdm_server::commands;
 use openxbdm_server::commands::system::CreateSettingsError;
 use openxbdm_server::commands::system::FlashBuffer;
 use openxbdm_server::commands::system::FlashOptions;
+use openxbdm_server::commands::system::LaunchTitle;
+use openxbdm_server::commands::system::LoaderLaunch;
 use openxbdm_server::commands::system::RebootKind;
 use openxbdm_server::commands::system::SettingsCopy;
 use openxbdm_server::commands::system::SettingsFile;
@@ -296,6 +300,18 @@ impl commands::system::Backend for Console {
         // SAFETY: the system software registered this routine through
         // control code 0x20; it takes one argument.
         unsafe { kernel::call_export(routine, 0, 0, 0, 0) };
+    }
+
+    fn loader_launch(&mut self, title: &LaunchTitle) -> LoaderLaunch {
+        #[cfg(feature = "retail-dashlaunch")]
+        {
+            self::loader::launch(title)
+        }
+        #[cfg(not(feature = "retail-dashlaunch"))]
+        {
+            let _ = title;
+            LoaderLaunch::Unavailable
+        }
     }
 
     fn flash_begin(&mut self, rounded_size: u32) -> Option<FlashBuffer> {

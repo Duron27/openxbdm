@@ -9,6 +9,7 @@ use xbox360_sys::xboxkrnl::CreateOptions;
 use xbox360_sys::xboxkrnl::ShareAccess;
 
 use super::BootFlags;
+use super::LoaderLaunch;
 use super::RebootKind;
 use super::hard_reboot;
 use super::prepare_reboot;
@@ -702,6 +703,27 @@ fn begin_launch(
             state.system.boot_flags = effective;
             backend.launch_title();
             return LaunchOutcome::Done(Ok(Reply::Ok));
+        }
+    }
+
+    // Only a reboot the caller asked for overrides the loader: the forced
+    // cold boot above guards devkit settings a retail console lacks.
+    if !flags.intersects(HARD_REBOOT_FLAGS)
+        && !backend.title_launch_registered()
+        && !state.system.title.image.is_empty()
+    {
+        match backend.loader_launch(&state.system.title) {
+            LoaderLaunch::Unavailable => {}
+            LoaderLaunch::Started => {
+                state.system.title = LaunchTitle::default();
+                return LaunchOutcome::Done(Ok(Reply::Ok));
+            }
+            LoaderLaunch::Busy => {
+                return LaunchOutcome::Done(Err(ErrorCode::AccessDenied.into()));
+            }
+            LoaderLaunch::BadPath => {
+                return LaunchOutcome::Done(Err(ErrorCode::FilenameInvalid.into()));
+            }
         }
     }
 

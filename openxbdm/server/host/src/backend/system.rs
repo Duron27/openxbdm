@@ -8,6 +8,8 @@ use openxbdm_server::commands::system;
 use openxbdm_server::commands::system::CreateSettingsError;
 use openxbdm_server::commands::system::FlashBuffer;
 use openxbdm_server::commands::system::FlashOptions;
+use openxbdm_server::commands::system::LaunchTitle;
+use openxbdm_server::commands::system::LoaderLaunch;
 use openxbdm_server::commands::system::RebootKind;
 use openxbdm_server::commands::system::SettingsCopy;
 use openxbdm_server::commands::system::SettingsFile;
@@ -65,6 +67,10 @@ pub struct Mock {
     pub relaunch_routine: bool,
     /// In-place title relaunches performed.
     pub relaunches: u32,
+    /// What a loader launch reports.
+    pub loader_launch: LoaderLaunch,
+    /// Titles handed to the loader.
+    pub loader_launches: Vec<LaunchTitle>,
 
     /// A settings copy can allocate its buffer.
     pub copy_buffer_available: bool,
@@ -106,6 +112,8 @@ impl Default for Mock {
             hardware_flags: HARDWARE_FLAGS,
             relaunch_routine: false,
             relaunches: 0,
+            loader_launch: LoaderLaunch::Unavailable,
+            loader_launches: Vec::new(),
             copy_buffer_available: true,
             copies: Vec::new(),
             flash_memory: FLASH_MEMORY,
@@ -280,6 +288,13 @@ impl system::Backend for MockBackend {
 
     fn launch_title(&mut self) {
         self.system.relaunches += 1;
+    }
+
+    fn loader_launch(&mut self, title: &LaunchTitle) -> LoaderLaunch {
+        if self.system.loader_launch == LoaderLaunch::Started {
+            self.system.loader_launches.push(*title);
+        }
+        self.system.loader_launch
     }
 
     fn flash_begin(&mut self, rounded_size: u32) -> Option<FlashBuffer> {

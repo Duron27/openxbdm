@@ -17,6 +17,7 @@ use openxbdm_server::commands::console::TraceMask;
 use openxbdm_server::commands::system::BootFlags;
 use openxbdm_server::commands::system::BootWait;
 use openxbdm_server::commands::system::LaunchReason;
+use openxbdm_server::commands::system::LoaderLaunch;
 use openxbdm_server::commands::system::RebootKind;
 use openxbdm_server::commands::system::SettingsCopy;
 use openxbdm_server::commands::system::TitleFlags;
@@ -479,6 +480,52 @@ fn magicboot_relaunches_in_place_or_reboots() {
     assert_eq!(host.server.state.system.boot_wait, Some(BootWait::Stop));
 
     assert!(settings_lines(&host).contains(&format!("title flags=0x00000008 name=\"{GAME}\"")));
+}
+
+#[test]
+fn magicboot_without_a_launch_routine_goes_through_the_loader() {
+    let server = TestServer::start();
+    let mut session = server.raw();
+    session.line();
+
+    {
+        let mut host = server.host.lock();
+        host.backend.filesystem.write(GAME, b"xex");
+        host.backend.system.loader_launch = LoaderLaunch::Started;
+        // The forced cold boot of revision 4 hardware does not apply.
+        host.backend.console.i2c_failure = true;
+    }
+
+    assert_eq!(session.command("magicboot title=e:\\game.xex"), "200- OK");
+    {
+        let host = server.host.lock();
+        assert_eq!(host.backend.system.loader_launches.len(), 1);
+        assert_eq!(
+            host.backend.system.loader_launches[0].image.as_bytes(),
+            GAME.as_bytes()
+        );
+        assert!(host.backend.system.reboots.is_empty());
+        assert!(host.server.state.system.title.image.is_empty());
+    }
+
+    server.host.lock().backend.system.loader_launch = LoaderLaunch::Busy;
+    assert_eq!(
+        session.command("magicboot title=e:\\game.xex"),
+        "414- access denied"
+    );
+
+    // A cold boot the caller asks for still reboots.
+    server.host.lock().backend.system.loader_launch = LoaderLaunch::Started;
+    assert_eq!(
+        session.command("magicboot title=e:\\game.xex cold"),
+        "200- OK"
+    );
+    let mut rest = Vec::new();
+    session.reader.read_to_end(&mut rest).unwrap();
+
+    let host = server.host.lock();
+    assert_eq!(host.backend.system.loader_launches.len(), 1);
+    assert_eq!(host.backend.system.reboots, [RebootKind::Normal]);
 }
 
 #[test]
