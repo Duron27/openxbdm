@@ -64,6 +64,12 @@ impl Platform for Console {
     }
 
     fn is_test_kit(&self) -> bool {
+        // A patched retail console is debugged as a development kit, as the RGH build of the stock
+        // monitor reports it: as a test kit it would refuse suspend, resume, stop and the other
+        // development-kit commands.
+        if cfg!(feature = "retail-dashlaunch") {
+            return false;
+        }
         hardware_flags().contains(HardwareFlags::TEST_KIT) || console::test_kit_marked()
     }
 
